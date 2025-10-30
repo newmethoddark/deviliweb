@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Instagram Reels Downloader</title>
+  <style>
+    :root {
+      --bg: #0f172a;
+      --card: #1e293b;
+      --text: #f1f5f9;
+      --muted: #94a3b8;
+      --accent: #06b6d4;
+    }
+    body {
+      margin: 0;
+      font-family: "Poppins", system-ui, sans-serif;
+      background: linear-gradient(180deg, #020617, #0f172a);
+      color: var(--text);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      padding: 20px;
+    }
+    .card {
+      background: var(--card);
+      border-radius: 16px;
+      box-shadow: 0 0 40px rgba(0, 0, 0, 0.4);
+      padding: 24px;
+      width: 100%;
+      max-width: 700px;
+    }
+    h1 {
+      text-align: center;
+      font-size: 24px;
+      margin-bottom: 10px;
+    }
+    input {
+      width: 100%;
+      padding: 12px;
+      border-radius: 10px;
+      border: none;
+      background: #0f172a;
+      color: var(--text);
+      font-size: 14px;
+      outline: none;
+    }
+    button {
+      background: var(--accent);
+      color: #002031;
+      border: none;
+      border-radius: 10px;
+      padding: 10px 16px;
+      font-weight: 600;
+      cursor: pointer;
+    }
+    button:hover {
+      background: #22d3ee;
+    }
+    .row {
+      display: flex;
+      gap: 8px;
+      margin-top: 10px;
+    }
+    .muted {
+      color: var(--muted);
+      font-size: 13px;
+      text-align: center;
+      margin-top: 6px;
+    }
+    .result {
+      margin-top: 18px;
+      padding: 16px;
+      border-radius: 12px;
+      background: rgba(255, 255, 255, 0.05);
+    }
+    video {
+      width: 100%;
+      max-height: 400px;
+      border-radius: 10px;
+      margin-top: 12px;
+      background: #000;
+    }
+    .tag {
+      display: inline-block;
+      background: rgba(255, 255, 255, 0.08);
+      padding: 6px 10px;
+      border-radius: 999px;
+      margin: 4px 6px 0 0;
+      font-size: 13px;
+      color: var(--muted);
+    }
+    a.download {
+      display: inline-block;
+      margin-top: 10px;
+      padding: 10px 14px;
+      border-radius: 8px;
+      background: #0ea5a4;
+      color: #002031;
+      font-weight: 600;
+      text-decoration: none;
+    }
+    .error {
+      color: #ffb4b4;
+      background: rgba(255, 0, 0, 0.06);
+      padding: 8px;
+      border-radius: 8px;
+      margin-top: 10px;
+    }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h1>📸 Instagram Reels Downloader</h1>
+    <p class="muted">Paste any public Instagram Reel link to get video, caption, hashtags & username.</p>
+    <input id="url" placeholder="https://www.instagram.com/reel/XXXXXXXX/" />
+    <div class="row">
+      <button id="fetch">Download & Show</button>
+      <button id="reset" style="background:#1e293b;color:#cbd5e1;">Reset</button>
+    </div>
+    <div id="result"></div>
+  </div>
+
+  <script>
+    const btn = document.getElementById("fetch");
+    const resetBtn = document.getElementById("reset");
+    const result = document.getElementById("result");
+
+    btn.addEventListener("click", async () => {
+      const url = document.getElementById("url").value.trim();
+      result.innerHTML = "";
+      if (!url) {
+        result.innerHTML = `<div class="error">⚠️ Please enter a reel link.</div>`;
+        return;
+      }
+
+      result.innerHTML = `<p class="muted">⏳ Fetching reel data...</p>`;
+      try {
+        const res = await fetch("/api/extract", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ url }),
+        });
+        const data = await res.json();
+        if (data.error) {
+          result.innerHTML = `<div class="error">${data.error}</div>`;
+          return;
+        }
+
+        let html = `<div class="result">`;
+        html += `<h3>@${data.username || "unknown"}</h3>`;
+        html += `<p>${escapeHtml(data.caption || "No caption found.")}</p>`;
+        if (data.hashtags?.length) {
+          data.hashtags.forEach((tag) => {
+            html += `<span class="tag">#${escapeHtml(tag)}</span>`;
+          });
+        }
+        if (data.videoUrl) {
+          html += `<video controls src="${data.videoUrl}"></video>`;
+          html += `<a class="download" href="${data.videoUrl}" download>⬇️ Download Video</a>`;
+        }
+        html += `</div>`;
+        result.innerHTML = html;
+      } catch (err) {
+        result.innerHTML = `<div class="error">❌ Error fetching reel: ${escapeHtml(err.message)}</div>`;
+      }
+    });
+
+    resetBtn.addEventListener("click", () => {
+      document.getElementById("url").value = "";
+      result.innerHTML = "";
+    });
+
+    function escapeHtml(str) {
+      return String(str).replace(/[&<>"']/g, (s) => ({
+        "&": "&amp;",
+        "<": "&lt;",
+        ">": "&gt;",
+        '"': "&quot;",
+        "'": "&#39;",
+      }[s]));
+    }
+  </script>
+</body>
+</html>
